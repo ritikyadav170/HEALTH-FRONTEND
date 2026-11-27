@@ -15,6 +15,7 @@ export default function BulkDoctorUpload({ onSuccess }) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
   const hospital = JSON.parse(localStorage.getItem("hospital_info") || "{}");
 
   const downloadTemplate = (format = "csv") => {
@@ -35,24 +36,33 @@ export default function BulkDoctorUpload({ onSuccess }) {
     if (loading) return;
     setOpen(false);
     setFile(null);
+    setUploadResult(null);
   };
 
   const upload = async () => {
     if (!file) return toast.error("Please select a CSV, Excel, or ZIP file");
     const formData = new FormData();
     formData.append("file", file);
+    setUploadResult(null);
     try {
       setLoading(true);
       const response = await api.post("/doctors/bulk-upload", formData);
       const details = response.data.data || {};
       const failed = details.errors?.length || 0;
-      toast.success(
-        failed
-          ? `Imported ${details.createdCount || 0} doctors. ${failed} rows failed.`
-          : response.data.message || "Doctors imported successfully"
-      );
-      onSuccess?.();
-      close();
+      if (details.createdCount > 0) {
+        onSuccess?.();
+      }
+      if (failed > 0) {
+        setUploadResult(details);
+        toast.error(
+          details.createdCount > 0
+            ? `Imported ${details.createdCount} doctors. ${failed} rows failed.`
+            : `${failed} rows could not be imported`
+        );
+      } else {
+        toast.success(response.data.message || "Doctors imported successfully");
+        close();
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || "Bulk upload failed");
     } finally {
@@ -130,6 +140,44 @@ export default function BulkDoctorUpload({ onSuccess }) {
                 <span className="mt-1 block text-xs text-slate-500">ZIP may contain the data file and doctor images</span>
                 <input type="file" className="hidden" accept=".csv,.xlsx,.xls,.zip" onChange={(event) => setFile(event.target.files?.[0] || null)} />
               </label>
+
+              {uploadResult?.errors?.length > 0 && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50/90 p-4">
+                  <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-rose-200">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white text-[11px] font-bold">!</span>
+                      <p className="font-bold text-rose-900 text-sm">
+                        {uploadResult.errors.length} {uploadResult.errors.length === 1 ? "row" : "rows"} could not be imported
+                      </p>
+                    </div>
+                    {uploadResult.createdCount > 0 && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                        {uploadResult.createdCount} imported successfully
+                      </span>
+                    )}
+                  </div>
+                  <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+                    {uploadResult.errors.map((err, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-2.5 rounded-lg border border-rose-200 bg-white p-2.5 text-xs shadow-sm"
+                      >
+                        <span className="shrink-0 rounded bg-rose-100 px-2 py-0.5 font-bold text-rose-800">
+                          Row {err.row}
+                        </span>
+                        {err.mobile && err.mobile !== "N/A" && (
+                          <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 font-mono text-slate-700">
+                            {err.mobile}
+                          </span>
+                        )}
+                        <span className="flex-1 font-medium text-rose-900 leading-relaxed">
+                          {err.error}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={close} className="rounded-xl border border-slate-200 px-5 py-3 font-bold text-slate-600">Cancel</button>
                 <button type="button" onClick={upload} disabled={loading} className="rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60">
