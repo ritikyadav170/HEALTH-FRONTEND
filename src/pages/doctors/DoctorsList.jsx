@@ -245,7 +245,9 @@ export default function DoctorsList() {
                       </span>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-600">
-                      {doc.category?.name || "N/A"}
+                      {Array.isArray(doc.categories) && doc.categories.length > 0
+                        ? doc.categories.map((c) => (typeof c === "object" ? c?.name : c)).filter(Boolean).join(", ")
+                        : doc.category?.name || "N/A"}
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="text-sm font-medium text-slate-900">{doc.email}</div>

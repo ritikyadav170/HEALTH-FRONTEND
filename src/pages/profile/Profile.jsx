@@ -33,7 +33,14 @@ export default function Profile() {
 
   const requestOtp = async () => {
     setBusy(true);
-    try { const { data } = await api.post("/password/request-otp"); setOtpSent(true); toast.success(data.message); }
+    try {
+      const { data } = await api.post("/password/request-otp");
+      setOtpSent(true);
+      toast.success(data.message);
+      if (data.otp) {
+        toast(`Code: ${data.otp}`, { icon: "🔑", duration: 8000 });
+      }
+    }
     catch (error) { toast.error(error.response?.data?.message || "Could not send verification code"); }
     finally { setBusy(false); }
   };

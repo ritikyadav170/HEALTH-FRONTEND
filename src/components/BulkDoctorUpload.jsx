@@ -5,8 +5,8 @@ import api from "../utils/api";
 
 const TEMPLATE_COLUMNS = [
   "name", "mobile", "email", "gender", "dob", "qualification", "licOrRegNumber",
-  "category", "symptoms", "country", "countryCode", "address", "clinicAddress",
-  "state", "district", "pincode", "yearOfExp", "registrationYear", "inClinicAvailable",
+  "category", "symptoms", "image", "country", "countryCode", "address", "clinicAddress",
+  "state", "district", "city", "pincode", "yearOfExp", "registrationYear", "inClinicAvailable",
   "videoConsultAvailable", "inClinicFee", "videoConsultFee", "openingTime", "closingTime",
   "sessionTime", "breakTime",
 ];
@@ -15,40 +15,54 @@ export default function BulkDoctorUpload({ onSuccess }) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
   const hospital = JSON.parse(localStorage.getItem("hospital_info") || "{}");
 
-  const downloadTemplate = () => {
-    const csv = `${TEMPLATE_COLUMNS.join(",")}\n${TEMPLATE_COLUMNS.map(() => "").join(",")}\n`;
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const downloadTemplate = (format = "csv") => {
     const link = document.createElement("a");
-    link.href = url;
-    link.download = "hospital_doctors_template.csv";
+    if (format === "zip") {
+      link.href = "/doctors_import_xyz_v2 (1).zip";
+      link.download = "doctors_import_xyz_v2 (1).zip";
+    } else {
+      link.href = "/doctors_bulk_import.csv";
+      link.download = "doctors_bulk_import.csv";
+    }
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(link);
   };
 
   const close = () => {
     if (loading) return;
     setOpen(false);
     setFile(null);
+    setUploadResult(null);
   };
 
   const upload = async () => {
     if (!file) return toast.error("Please select a CSV, Excel, or ZIP file");
     const formData = new FormData();
     formData.append("file", file);
+    setUploadResult(null);
     try {
       setLoading(true);
       const response = await api.post("/doctors/bulk-upload", formData);
       const details = response.data.data || {};
       const failed = details.errors?.length || 0;
-      toast.success(
-        failed
-          ? `Imported ${details.createdCount || 0} doctors. ${failed} rows failed.`
-          : response.data.message || "Doctors imported successfully"
-      );
-      onSuccess?.();
-      close();
+      if (details.createdCount > 0) {
+        onSuccess?.();
+      }
+      if (failed > 0) {
+        setUploadResult(details);
+        toast.error(
+          details.createdCount > 0
+            ? `Imported ${details.createdCount} doctors. ${failed} rows failed.`
+            : `${failed} rows could not be imported`
+        );
+      } else {
+        toast.success(response.data.message || "Doctors imported successfully");
+        close();
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || "Bulk upload failed");
     } finally {
@@ -103,15 +117,67 @@ export default function BulkDoctorUpload({ onSuccess }) {
                   <li>New values for Country, Category, or Symptoms will be <strong>created automatically</strong> if they don't exist.</li>
                 </ul>
               </div>
-              <button type="button" onClick={downloadTemplate} className="flex items-center gap-2 text-sm font-bold text-indigo-700 hover:text-indigo-900">
-                <MdDownload className="text-lg" /> Download sample CSV format
-              </button>
+              <div className="flex flex-wrap items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => downloadTemplate("csv")}
+                  className="flex items-center gap-2 text-sm font-bold text-indigo-700 hover:text-indigo-900"
+                >
+                  <MdDownload className="text-lg" /> Download sample CSV format
+                </button>
+                <span className="text-slate-300">|</span>
+                <button
+                  type="button"
+                  onClick={() => downloadTemplate("zip")}
+                  className="flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-900"
+                >
+                  <MdDownload className="text-lg" /> Download sample ZIP (with images)
+                </button>
+              </div>
               <label className="block cursor-pointer rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-center hover:border-indigo-400 hover:bg-indigo-50/40">
                 <MdCloudUpload className="mx-auto text-4xl text-indigo-500" />
                 <span className="mt-2 block font-bold text-slate-700">{file ? file.name : "Choose CSV, XLSX, XLS, or ZIP"}</span>
                 <span className="mt-1 block text-xs text-slate-500">ZIP may contain the data file and doctor images</span>
                 <input type="file" className="hidden" accept=".csv,.xlsx,.xls,.zip" onChange={(event) => setFile(event.target.files?.[0] || null)} />
               </label>
+
+              {uploadResult?.errors?.length > 0 && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50/90 p-4">
+                  <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-rose-200">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white text-[11px] font-bold">!</span>
+                      <p className="font-bold text-rose-900 text-sm">
+                        {uploadResult.errors.length} {uploadResult.errors.length === 1 ? "row" : "rows"} could not be imported
+                      </p>
+                    </div>
+                    {uploadResult.createdCount > 0 && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                        {uploadResult.createdCount} imported successfully
+                      </span>
+                    )}
+                  </div>
+                  <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+                    {uploadResult.errors.map((err, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-2.5 rounded-lg border border-rose-200 bg-white p-2.5 text-xs shadow-sm"
+                      >
+                        <span className="shrink-0 rounded bg-rose-100 px-2 py-0.5 font-bold text-rose-800">
+                          Row {err.row}
+                        </span>
+                        {err.mobile && err.mobile !== "N/A" && (
+                          <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 font-mono text-slate-700">
+                            {err.mobile}
+                          </span>
+                        )}
+                        <span className="flex-1 font-medium text-rose-900 leading-relaxed">
+                          {err.error}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={close} className="rounded-xl border border-slate-200 px-5 py-3 font-bold text-slate-600">Cancel</button>
                 <button type="button" onClick={upload} disabled={loading} className="rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60">

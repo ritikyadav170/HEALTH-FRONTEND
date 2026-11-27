@@ -17,6 +17,9 @@ export default function ForgotPassword() {
       if (step === 1) {
         const result = await api.post("/forgot-password", { email });
         toast.success(result.data.message);
+        if (result.data.otp) {
+          toast(`Code: ${result.data.otp}`, { icon: "🔑", duration: 8000 });
+        }
         setStep(2);
       } else {
         const result = await api.post("/reset-password", { email, otp, newPassword });

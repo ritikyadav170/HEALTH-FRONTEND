@@ -23,12 +23,82 @@ const getDegreeLabel = (degree) => {
   return degree?.name || degree?.degree || degree?.title || degree?.qualification || "";
 };
 
+const formatQualification = (qualification) => {
+  if (!qualification) return "—";
+  if (typeof qualification === "string") {
+    try {
+      const parsed = JSON.parse(qualification);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(Boolean).join(", ") || "—";
+      }
+    } catch {}
+  }
+  if (Array.isArray(qualification)) {
+    return qualification.filter(Boolean).join(", ") || "—";
+  }
+  return String(qualification);
+};
+
 const formatDegrees = (vendor) => {
   if (Array.isArray(vendor?.degrees) && vendor.degrees.length) {
     const labels = vendor.degrees.map(getDegreeLabel).filter(Boolean);
     if (labels.length) return labels.join(", ");
   }
-  return vendor?.degree || vendor?.degreeName || vendor?.qualification || "N/A";
+  const qual = vendor?.degree || vendor?.degreeName || vendor?.qualification;
+  if (!qual) return "N/A";
+  if (typeof qual === "string") {
+    try {
+      const parsed = JSON.parse(qual);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(Boolean).join(", ") || "N/A";
+      }
+    } catch {}
+  }
+  if (Array.isArray(qual)) {
+    return qual.filter(Boolean).join(", ") || "N/A";
+  }
+  return String(qual) || "N/A";
+};
+
+const formatCategories = (vendor, categoriesList = []) => {
+  const getCatName = (item) => {
+    if (!item) return "";
+    if (typeof item === "object" && item.name) return item.name;
+    const str = String(item).trim();
+    const found = categoriesList.find((c) => String(c._id) === str || c.name === str);
+    if (found?.name) return found.name;
+    // Don't show raw 24 hex char Mongo ObjectIds if unresolved
+    if (/^[0-9a-fA-F]{24}$/.test(str)) return "";
+    return str;
+  };
+
+  if (Array.isArray(vendor?.categories) && vendor.categories.length > 0) {
+    const names = vendor.categories.map(getCatName).filter(Boolean);
+    if (names.length) return names.join(", ");
+  }
+
+  if (vendor?.category) {
+    const primaryName = getCatName(vendor.category);
+    if (primaryName) return primaryName;
+  }
+
+  return "N/A";
+};
+
+const formatDepartments = (vendor) => {
+  let dept = vendor?.department;
+  if (!dept || (Array.isArray(dept) && dept.length === 0)) return "N/A";
+  if (typeof dept === "string") {
+    try {
+      const parsed = JSON.parse(dept);
+      if (Array.isArray(parsed)) dept = parsed;
+    } catch {}
+  }
+  if (Array.isArray(dept)) {
+    const cleaned = dept.map((d) => (typeof d === "object" ? d?.name || d?._id : d)).filter(Boolean);
+    return cleaned.length ? cleaned.join(", ") : "N/A";
+  }
+  return String(dept) || "N/A";
 };
 
 const formatDoctorDob = (dob) => {
@@ -56,6 +126,7 @@ const ViewDoctor = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [certificateOpen, setCertificateOpen] = useState(false);
+  const [categoriesList, setCategoriesList] = useState([]);
   
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [blockUpdating, setBlockUpdating] = useState(false);
@@ -112,15 +183,21 @@ const ViewDoctor = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await api.get(`/doctors/${id}`);
-        const data = res.data?.data;
-        if (res.data?.success && data) {
+        const [docRes, catRes] = await Promise.all([
+          api.get(`/doctors/${id}`),
+          api.get("/common/categories").catch(() => ({ data: { success: false, data: [] } })),
+        ]);
+        const data = docRes.data?.data;
+        if (docRes.data?.success && data) {
           setVendor(data.vendor || data);
           setStats(data.appointmentStats || null);
           setRecentAppointments(data.recentAppointments || []);
           setUpcomingAppointments(data.upcomingAppointmentsNext2Days || []);
         } else {
-          setError(res.data?.message || "Vendor not found");
+          setError(docRes.data?.message || "Vendor not found");
+        }
+        if (catRes.data?.success && Array.isArray(catRes.data?.data)) {
+          setCategoriesList(catRes.data.data);
         }
       } catch (err) {
         setError(err.response?.data?.message || err.message || "Error fetching vendor");
@@ -138,12 +215,20 @@ const ViewDoctor = () => {
 
   return (
     <div className="w-full bg-white shadow-2xl rounded-2xl p-8 mt-8 relative">
-      <button
-        className="absolute top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition"
-        onClick={() => navigate(-1)}
-      >
-        Back
-      </button>
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <button
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium text-sm shadow-sm"
+          onClick={() => navigate(`/doctors/edit/${id}`)}
+        >
+          Edit Doctor
+        </button>
+        <button
+          className="bg-slate-600 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition font-medium text-sm shadow-sm"
+          onClick={() => navigate(-1)}
+        >
+          Back
+        </button>
+      </div>
       <div className="flex flex-col md:flex-row gap-8">
         {/* Left Profile Card */}
         <div className="md:w-1/3 flex flex-col items-center bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 shadow-lg">
@@ -167,7 +252,7 @@ const ViewDoctor = () => {
             <InfoCard label="DOB" value={formatDoctorDob(vendor.dob)} color="yellow" />
             <InfoCard
               label="Qualification"
-              value={vendor.qualification || "—"}
+              value={formatQualification(vendor.qualification)}
               color="blue"
             />
             <InfoCard
@@ -185,6 +270,27 @@ const ViewDoctor = () => {
               value={vendor.licOrRegNumber}
               color="purple"
             />
+            {vendor.countryRegistration && (
+              <InfoCard
+                label="Reg. Country"
+                value={vendor.countryRegistration}
+                color="indigo"
+              />
+            )}
+            {vendor.licenseAuthority && (
+              <InfoCard
+                label="License Authority"
+                value={vendor.licenseAuthority}
+                color="blue"
+              />
+            )}
+            {vendor.specialization && (
+              <InfoCard
+                label="Specialization"
+                value={vendor.specialization}
+                color="green"
+              />
+            )}
             <InfoCard
               label="Wallet"
               value={`₹ ${vendor.wallet_balance ?? 0}`}
@@ -354,13 +460,11 @@ const ViewDoctor = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="text-gray-700">
                 <span className="font-medium">Category:</span>{" "}
-                {Array.isArray(vendor.categories) && vendor.categories.length > 0
-                  ? vendor.categories.map((c) => c?.name || c).join(", ")
-                  : vendor.category?.name || "N/A"}
+                {formatCategories(vendor, categoriesList)}
               </div>
               <div className="text-gray-700">
                 <span className="font-medium">Departments:</span>{" "}
-                {Array.isArray(vendor.department) ? vendor.department.join(", ") : "N/A"}
+                {formatDepartments(vendor)}
               </div>
               <div className="text-gray-700 md:col-span-2">
                 <span className="font-medium">Degrees:</span>{" "}
@@ -378,6 +482,25 @@ const ViewDoctor = () => {
                 ) : (
                   "N/A"
                 )}
+              </div>
+            </div>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-6 shadow text-left">
+            <h3 className="text-xl font-semibold text-blue-700 mb-4">
+              Professional Registration Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="text-gray-700">
+                <span className="font-medium">Registration Country:</span>{" "}
+                {vendor.countryRegistration || "N/A"}
+              </div>
+              <div className="text-gray-700">
+                <span className="font-medium">License Authority:</span>{" "}
+                {vendor.licenseAuthority || "N/A"}
+              </div>
+              <div className="text-gray-700 md:col-span-2">
+                <span className="font-medium">Specialization:</span>{" "}
+                {vendor.specialization || "N/A"}
               </div>
             </div>
           </div>
