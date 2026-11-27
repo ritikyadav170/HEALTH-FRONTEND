@@ -91,13 +91,23 @@ export default function AddDoctor({ isEditing = false }) {
             ...prev,
             Name: doctor.Name || "", email: doctor.email || "", mobile: doctor.mobile || "",
             dob: doctor.dob ? new Date(doctor.dob).toISOString().slice(0, 10) : "", gender: doctor.gender || "male",
-            qualification: doctor.qualification ? [doctor.qualification] : (doctor.degrees || []).map(item => item.name).filter(Boolean),
+            qualification: (() => {
+              if (Array.isArray(doctor.qualification)) return doctor.qualification;
+              if (typeof doctor.qualification === "string") {
+                try {
+                  const parsed = JSON.parse(doctor.qualification);
+                  if (Array.isArray(parsed)) return parsed;
+                } catch {}
+                return [doctor.qualification];
+              }
+              return (doctor.degrees || []).map(item => item.name || item.degree || item.title).filter(Boolean);
+            })(),
             registrationYear: doctor.registrationYear || "", yearOfExp: doctor.yearOfExp || "",
             licOrRegNumber: doctor.licOrRegNumber || "", inClinicFee: doctor.inClinicFee || "", videoConsultFee: doctor.videoConsultFee || "",
             address: doctor.address || "", clinicAddress: doctor.clinicAddress || "", state: doctor.state || "", district: doctor.district || "",
             city: doctor.city || "", pincode: doctor.pincode || "", lat: doctor.lat || "", long: doctor.long || "",
             countryCode: selectedCountry?.code || doctor.countryCode || "+91", country: selectedCountry?.name.split(" (")[0] || doctor.country || "India", countryIso: selectedCountry?.iso2 || "IN",
-            isEmergency: Boolean(doctor.isEmergency), inClinicAvailable: Boolean(doctor.inClinicAvaialble), videoConsultAvailable: Boolean(doctor.videoConsultAvailable),
+            isEmergency: Boolean(doctor.isEmergency), inClinicAvailable: Boolean(doctor.inClinicAvailable ?? doctor.inClinicAvaialble), videoConsultAvailable: Boolean(doctor.videoConsultAvailable),
             categories: (doctor.categories?.length ? doctor.categories : [doctor.category]).filter(Boolean).map(toId),
             symptoms: (doctor.symptoms || []).map(toId), certificate: null, aadhaarImage: null, passportImage: null, profileImage: null,
           }));
