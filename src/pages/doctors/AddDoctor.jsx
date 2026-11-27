@@ -40,6 +40,9 @@ export default function AddDoctor({ isEditing = false }) {
     registrationYear: "",
     yearOfExp: "",
     licOrRegNumber: "",
+    countryRegistration: "",
+    licenseAuthority: "",
+    specialization: "",
     inClinicFee: "",
     videoConsultFee: "",
     address: "",
@@ -103,7 +106,11 @@ export default function AddDoctor({ isEditing = false }) {
               return (doctor.degrees || []).map(item => item.name || item.degree || item.title).filter(Boolean);
             })(),
             registrationYear: doctor.registrationYear || "", yearOfExp: doctor.yearOfExp || "",
-            licOrRegNumber: doctor.licOrRegNumber || "", inClinicFee: doctor.inClinicFee || "", videoConsultFee: doctor.videoConsultFee || "",
+            licOrRegNumber: doctor.licOrRegNumber || "",
+            countryRegistration: doctor.countryRegistration || "",
+            licenseAuthority: doctor.licenseAuthority || "",
+            specialization: doctor.specialization || "",
+            inClinicFee: doctor.inClinicFee || "", videoConsultFee: doctor.videoConsultFee || "",
             address: doctor.address || "", clinicAddress: doctor.clinicAddress || "", state: doctor.state || "", district: doctor.district || "",
             city: doctor.city || "", pincode: doctor.pincode || "", lat: doctor.lat || "", long: doctor.long || "",
             countryCode: selectedCountry?.code || doctor.countryCode || "+91", country: selectedCountry?.name.split(" (")[0] || doctor.country || "India", countryIso: selectedCountry?.iso2 || "IN",
@@ -401,6 +408,46 @@ export default function AddDoctor({ isEditing = false }) {
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Years of Experience</label>
                 <input name="yearOfExp" type="number" placeholder="e.g. 10" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" value={formData.yearOfExp} onChange={handleInputChange} />
+              </div>
+            </div>
+          </section>
+
+          {/* Professional Registration Details */}
+          <section>
+            <h2 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-100 pb-2">Professional Registration Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Registration Country</label>
+                <input
+                  name="countryRegistration"
+                  type="text"
+                  placeholder="Registration Country"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  value={formData.countryRegistration}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">License Authority</label>
+                <input
+                  name="licenseAuthority"
+                  type="text"
+                  placeholder="License Authority"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  value={formData.licenseAuthority}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Specialization</label>
+                <input
+                  name="specialization"
+                  type="text"
+                  placeholder="Specialization"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  value={formData.specialization}
+                  onChange={handleInputChange}
+                />
               </div>
             </div>
           </section>

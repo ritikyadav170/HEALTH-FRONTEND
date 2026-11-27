@@ -215,12 +215,20 @@ const ViewDoctor = () => {
 
   return (
     <div className="w-full bg-white shadow-2xl rounded-2xl p-8 mt-8 relative">
-      <button
-        className="absolute top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition"
-        onClick={() => navigate(-1)}
-      >
-        Back
-      </button>
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <button
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium text-sm shadow-sm"
+          onClick={() => navigate(`/doctors/edit/${id}`)}
+        >
+          Edit Doctor
+        </button>
+        <button
+          className="bg-slate-600 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition font-medium text-sm shadow-sm"
+          onClick={() => navigate(-1)}
+        >
+          Back
+        </button>
+      </div>
       <div className="flex flex-col md:flex-row gap-8">
         {/* Left Profile Card */}
         <div className="md:w-1/3 flex flex-col items-center bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 shadow-lg">
@@ -262,6 +270,27 @@ const ViewDoctor = () => {
               value={vendor.licOrRegNumber}
               color="purple"
             />
+            {vendor.countryRegistration && (
+              <InfoCard
+                label="Reg. Country"
+                value={vendor.countryRegistration}
+                color="indigo"
+              />
+            )}
+            {vendor.licenseAuthority && (
+              <InfoCard
+                label="License Authority"
+                value={vendor.licenseAuthority}
+                color="blue"
+              />
+            )}
+            {vendor.specialization && (
+              <InfoCard
+                label="Specialization"
+                value={vendor.specialization}
+                color="green"
+              />
+            )}
             <InfoCard
               label="Wallet"
               value={`₹ ${vendor.wallet_balance ?? 0}`}
@@ -453,6 +482,25 @@ const ViewDoctor = () => {
                 ) : (
                   "N/A"
                 )}
+              </div>
+            </div>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-6 shadow text-left">
+            <h3 className="text-xl font-semibold text-blue-700 mb-4">
+              Professional Registration Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="text-gray-700">
+                <span className="font-medium">Registration Country:</span>{" "}
+                {vendor.countryRegistration || "N/A"}
+              </div>
+              <div className="text-gray-700">
+                <span className="font-medium">License Authority:</span>{" "}
+                {vendor.licenseAuthority || "N/A"}
+              </div>
+              <div className="text-gray-700 md:col-span-2">
+                <span className="font-medium">Specialization:</span>{" "}
+                {vendor.specialization || "N/A"}
               </div>
             </div>
           </div>
