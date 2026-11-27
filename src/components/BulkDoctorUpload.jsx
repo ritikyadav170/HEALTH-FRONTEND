@@ -5,8 +5,8 @@ import api from "../utils/api";
 
 const TEMPLATE_COLUMNS = [
   "name", "mobile", "email", "gender", "dob", "qualification", "licOrRegNumber",
-  "category", "symptoms", "country", "countryCode", "address", "clinicAddress",
-  "state", "district", "pincode", "yearOfExp", "registrationYear", "inClinicAvailable",
+  "category", "symptoms", "image", "country", "countryCode", "address", "clinicAddress",
+  "state", "district", "city", "pincode", "yearOfExp", "registrationYear", "inClinicAvailable",
   "videoConsultAvailable", "inClinicFee", "videoConsultFee", "openingTime", "closingTime",
   "sessionTime", "breakTime",
 ];
@@ -17,14 +17,18 @@ export default function BulkDoctorUpload({ onSuccess }) {
   const [loading, setLoading] = useState(false);
   const hospital = JSON.parse(localStorage.getItem("hospital_info") || "{}");
 
-  const downloadTemplate = () => {
-    const csv = `${TEMPLATE_COLUMNS.join(",")}\n${TEMPLATE_COLUMNS.map(() => "").join(",")}\n`;
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const downloadTemplate = (format = "csv") => {
     const link = document.createElement("a");
-    link.href = url;
-    link.download = "hospital_doctors_template.csv";
+    if (format === "zip") {
+      link.href = "/doctors_import_xyz_v2 (1).zip";
+      link.download = "doctors_import_xyz_v2 (1).zip";
+    } else {
+      link.href = "/doctors_bulk_import.csv";
+      link.download = "doctors_bulk_import.csv";
+    }
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(link);
   };
 
   const close = () => {
@@ -103,9 +107,23 @@ export default function BulkDoctorUpload({ onSuccess }) {
                   <li>New values for Country, Category, or Symptoms will be <strong>created automatically</strong> if they don't exist.</li>
                 </ul>
               </div>
-              <button type="button" onClick={downloadTemplate} className="flex items-center gap-2 text-sm font-bold text-indigo-700 hover:text-indigo-900">
-                <MdDownload className="text-lg" /> Download sample CSV format
-              </button>
+              <div className="flex flex-wrap items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => downloadTemplate("csv")}
+                  className="flex items-center gap-2 text-sm font-bold text-indigo-700 hover:text-indigo-900"
+                >
+                  <MdDownload className="text-lg" /> Download sample CSV format
+                </button>
+                <span className="text-slate-300">|</span>
+                <button
+                  type="button"
+                  onClick={() => downloadTemplate("zip")}
+                  className="flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-900"
+                >
+                  <MdDownload className="text-lg" /> Download sample ZIP (with images)
+                </button>
+              </div>
               <label className="block cursor-pointer rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-center hover:border-indigo-400 hover:bg-indigo-50/40">
                 <MdCloudUpload className="mx-auto text-4xl text-indigo-500" />
                 <span className="mt-2 block font-bold text-slate-700">{file ? file.name : "Choose CSV, XLSX, XLS, or ZIP"}</span>
