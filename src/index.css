@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/* Match the admin panel's Olcure teal palette across the hospital app. */
+@theme {
+  --color-indigo-50: #e8f5f4;
+  --color-indigo-100: #bde2e0;
+  --color-indigo-200: #9dd4d1;
+  --color-indigo-300: #7bc3c0;
+  --color-indigo-400: #55b2ac;
+  --color-indigo-500: #44a49d;
+  --color-indigo-600: #3b8e88;
+  --color-indigo-700: #307570;
+  --color-indigo-800: #255b57;
+  --color-indigo-900: #183e3c;
+
+  --color-blue-50: #e8f5f4;
+  --color-blue-100: #bde2e0;
+  --color-blue-200: #9dd4d1;
+  --color-blue-300: #7bc3c0;
+  --color-blue-400: #55b2ac;
+  --color-blue-500: #44a49d;
+  --color-blue-600: #3b8e88;
+  --color-blue-700: #307570;
+  --color-blue-800: #255b57;
+  --color-blue-900: #183e3c;
+
+  --color-purple-50: #e8f5f4;
+  --color-purple-100: #bde2e0;
+  --color-purple-200: #9dd4d1;
+  --color-purple-300: #7bc3c0;
+  --color-purple-400: #55b2ac;
+  --color-purple-500: #44a49d;
+  --color-purple-600: #3b8e88;
+  --color-purple-700: #307570;
+  --color-purple-800: #255b57;
+  --color-purple-900: #183e3c;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #f3f4f6;
+}
