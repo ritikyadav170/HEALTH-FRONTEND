@@ -8,6 +8,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState(null);
   const submitInProgress = useRef(false);
 
   const handleSubmit = async (e) => {
@@ -15,6 +16,7 @@ export default function Login() {
     if (submitInProgress.current) return;
     submitInProgress.current = true;
     setLoading(true);
+    setLoginError(null);
     try {
       const res = await api.post("/login", formData);
       if (res.data.success) {
@@ -24,7 +26,9 @@ export default function Login() {
         navigate("/dashboard");
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Login failed", { id: "hospital-login-error" });
+      const errData = err.response?.data;
+      setLoginError(errData || { message: "Login failed" });
+      toast.error(errData?.message || "Login failed", { id: "hospital-login-error" });
     } finally {
       submitInProgress.current = false;
       setLoading(false);
@@ -120,10 +124,27 @@ export default function Login() {
                   className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-300 font-medium text-slate-900"
                   placeholder="••••••••"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    if (loginError) setLoginError(null);
+                  }}
                 />
               </div>
             </div>
+
+            {loginError && (
+              <div className="space-y-1.5 pt-0.5">
+                <div className="rounded-xl border border-red-200 bg-red-50/90 p-3 text-xs text-red-700 flex items-start gap-2 shadow-sm">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-red-500 shrink-0"></span>
+                  <span className="font-semibold leading-relaxed">{loginError.message}</span>
+                </div>
+                {loginError.attempts != null && loginError.maxAttempts != null && !loginError.isLocked && (
+                  <p className="text-[11px] font-semibold text-red-600 pl-1">
+                    Failed login attempts: {loginError.attempts} / {loginError.maxAttempts}. {loginError.attemptsRemaining} attempts remaining before lockout.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="pt-4">
               <button
