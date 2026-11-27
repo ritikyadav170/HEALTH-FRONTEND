@@ -23,12 +23,82 @@ const getDegreeLabel = (degree) => {
   return degree?.name || degree?.degree || degree?.title || degree?.qualification || "";
 };
 
+const formatQualification = (qualification) => {
+  if (!qualification) return "—";
+  if (typeof qualification === "string") {
+    try {
+      const parsed = JSON.parse(qualification);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(Boolean).join(", ") || "—";
+      }
+    } catch {}
+  }
+  if (Array.isArray(qualification)) {
+    return qualification.filter(Boolean).join(", ") || "—";
+  }
+  return String(qualification);
+};
+
 const formatDegrees = (vendor) => {
   if (Array.isArray(vendor?.degrees) && vendor.degrees.length) {
     const labels = vendor.degrees.map(getDegreeLabel).filter(Boolean);
     if (labels.length) return labels.join(", ");
   }
-  return vendor?.degree || vendor?.degreeName || vendor?.qualification || "N/A";
+  const qual = vendor?.degree || vendor?.degreeName || vendor?.qualification;
+  if (!qual) return "N/A";
+  if (typeof qual === "string") {
+    try {
+      const parsed = JSON.parse(qual);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(Boolean).join(", ") || "N/A";
+      }
+    } catch {}
+  }
+  if (Array.isArray(qual)) {
+    return qual.filter(Boolean).join(", ") || "N/A";
+  }
+  return String(qual) || "N/A";
+};
+
+const formatCategories = (vendor, categoriesList = []) => {
+  const getCatName = (item) => {
+    if (!item) return "";
+    if (typeof item === "object" && item.name) return item.name;
+    const str = String(item).trim();
+    const found = categoriesList.find((c) => String(c._id) === str || c.name === str);
+    if (found?.name) return found.name;
+    // Don't show raw 24 hex char Mongo ObjectIds if unresolved
+    if (/^[0-9a-fA-F]{24}$/.test(str)) return "";
+    return str;
+  };
+
+  if (Array.isArray(vendor?.categories) && vendor.categories.length > 0) {
+    const names = vendor.categories.map(getCatName).filter(Boolean);
+    if (names.length) return names.join(", ");
+  }
+
+  if (vendor?.category) {
+    const primaryName = getCatName(vendor.category);
+    if (primaryName) return primaryName;
+  }
+
+  return "N/A";
+};
+
+const formatDepartments = (vendor) => {
+  let dept = vendor?.department;
+  if (!dept || (Array.isArray(dept) && dept.length === 0)) return "N/A";
+  if (typeof dept === "string") {
+    try {
+      const parsed = JSON.parse(dept);
+      if (Array.isArray(parsed)) dept = parsed;
+    } catch {}
+  }
+  if (Array.isArray(dept)) {
+    const cleaned = dept.map((d) => (typeof d === "object" ? d?.name || d?._id : d)).filter(Boolean);
+    return cleaned.length ? cleaned.join(", ") : "N/A";
+  }
+  return String(dept) || "N/A";
 };
 
 const formatDoctorDob = (dob) => {
@@ -56,6 +126,7 @@ const ViewDoctor = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [certificateOpen, setCertificateOpen] = useState(false);
+  const [categoriesList, setCategoriesList] = useState([]);
   
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [blockUpdating, setBlockUpdating] = useState(false);
@@ -112,15 +183,21 @@ const ViewDoctor = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await api.get(`/doctors/${id}`);
-        const data = res.data?.data;
-        if (res.data?.success && data) {
+        const [docRes, catRes] = await Promise.all([
+          api.get(`/doctors/${id}`),
+          api.get("/common/categories").catch(() => ({ data: { success: false, data: [] } })),
+        ]);
+        const data = docRes.data?.data;
+        if (docRes.data?.success && data) {
           setVendor(data.vendor || data);
           setStats(data.appointmentStats || null);
           setRecentAppointments(data.recentAppointments || []);
           setUpcomingAppointments(data.upcomingAppointmentsNext2Days || []);
         } else {
-          setError(res.data?.message || "Vendor not found");
+          setError(docRes.data?.message || "Vendor not found");
+        }
+        if (catRes.data?.success && Array.isArray(catRes.data?.data)) {
+          setCategoriesList(catRes.data.data);
         }
       } catch (err) {
         setError(err.response?.data?.message || err.message || "Error fetching vendor");
@@ -167,7 +244,7 @@ const ViewDoctor = () => {
             <InfoCard label="DOB" value={formatDoctorDob(vendor.dob)} color="yellow" />
             <InfoCard
               label="Qualification"
-              value={vendor.qualification || "—"}
+              value={formatQualification(vendor.qualification)}
               color="blue"
             />
             <InfoCard
@@ -354,13 +431,11 @@ const ViewDoctor = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="text-gray-700">
                 <span className="font-medium">Category:</span>{" "}
-                {Array.isArray(vendor.categories) && vendor.categories.length > 0
-                  ? vendor.categories.map((c) => c?.name || c).join(", ")
-                  : vendor.category?.name || "N/A"}
+                {formatCategories(vendor, categoriesList)}
               </div>
               <div className="text-gray-700">
                 <span className="font-medium">Departments:</span>{" "}
-                {Array.isArray(vendor.department) ? vendor.department.join(", ") : "N/A"}
+                {formatDepartments(vendor)}
               </div>
               <div className="text-gray-700 md:col-span-2">
                 <span className="font-medium">Degrees:</span>{" "}
